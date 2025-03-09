@@ -1,0 +1,14 @@
+C:\Users\006ma\RiderProjects\ChatApp\bin\Debug\net9.0\ChatApp.exe
+C:\Users\006ma\RiderProjects\ChatApp\bin\Debug\net9.0\ChatApp.deps.json
+C:\Users\006ma\RiderProjects\ChatApp\bin\Debug\net9.0\ChatApp.runtimeconfig.json
+C:\Users\006ma\RiderProjects\ChatApp\bin\Debug\net9.0\ChatApp.dll
+C:\Users\006ma\RiderProjects\ChatApp\bin\Debug\net9.0\ChatApp.pdb
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.AssemblyInfoInputs.cache
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.AssemblyInfo.cs
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.csproj.CoreCompileInputs.cache
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.dll
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\refint\ChatApp.dll
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.pdb
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ChatApp.genruntimeconfig.cache
+C:\Users\006ma\RiderProjects\ChatApp\obj\Debug\net9.0\ref\ChatApp.dll

@@ -1,0 +1,11 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="FiveClients" type="CompoundRunConfigurationType">
+    <toRun name="Client1" type="DotNetProject" />
+    <toRun name="Client2" type="DotNetProject" />
+    <toRun name="Client3" type="DotNetProject" />
+    <toRun name="Client4" type="DotNetProject" />
+    <toRun name="Client5" type="DotNetProject" />
+    <toRun name="Server" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>
