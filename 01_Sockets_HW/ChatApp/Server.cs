@@ -10,75 +10,150 @@ public class Server
     private readonly int _bufferSize = 1024;
     private readonly Encoding _encoder = Encoding.GetEncoding("UTF-8");
     private readonly object _lock = new();
-    private readonly List<Socket> _tcpClients = new();
+    private readonly List<ClientData> _clients = new();
     private Socket _serverTcpSocket;
     private Socket _serverUdpSocket;
+    private bool _isRunning = true;
+    private string _ipAddress = "127.0.0.1";
+    private int _port = 8888;
 
     public void Run()
     {
-        var ipAddress = "127.0.0.1";
-        var port = 8888;
+        try
+        {
+            InitSockets();
 
+            Task.Factory.StartNew(HandleUdpCommunicationAsync, TaskCreationOptions.LongRunning);
+            Task.Factory.StartNew(CleanupDisconnectedClientsAsync, TaskCreationOptions.LongRunning);
+
+            _serverTcpSocket.Listen(WaitingMaxCount);
+
+            while (_isRunning)
+            {
+                var client = AcceptClient();
+                _ = Task.Run(async () => await HandleTcpClientAsync(client));
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Server error: {ex.Message}");
+        }
+        finally
+        {
+            Shutdown();
+        }
+    }
+
+    private void InitSockets()
+    {
         _serverTcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         _serverTcpSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
         _serverUdpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         _serverUdpSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
 
-        var serverEndPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
+        var serverEndPoint = new IPEndPoint(IPAddress.Parse(_ipAddress), _port);
 
         _serverTcpSocket.Bind(serverEndPoint);
         _serverUdpSocket.Bind(serverEndPoint);
 
         Console.WriteLine($"TCP endpoint: {_serverTcpSocket.LocalEndPoint}");
         Console.WriteLine($"UDP endpoint: {_serverUdpSocket.LocalEndPoint}");
-        _ = Task.Run(async () =>
+    }
+
+    private ClientData AcceptClient()
+    {
+        var clientSocket = _serverTcpSocket.Accept();
+        var username = GetUsername(clientSocket);
+
+        var client = new ClientData
         {
-            try
-            {
-                await HandleUdpCommunication();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        });
+            TcpSocket = clientSocket,
+            UdpEndpoint = clientSocket.RemoteEndPoint,
+            Username = username,
+            Disconnected = false
+        };
 
-        _serverTcpSocket.Listen(WaitingMaxCount);
+        Console.WriteLine($"Connected client: {client.Username}");
 
-        while (true)
+        lock (_lock)
         {
-            var clientSocket = _serverTcpSocket.Accept();
+            _clients.Add(client);
+        }
 
-            Console.WriteLine($"Connected client: {clientSocket.RemoteEndPoint}");
+        return client;
+    }
+
+    private void DisconnectClient(ClientData client)
+    {
+        if (client.Disconnected) return;
+
+        try
+        {
+            lock (_lock)
+            {
+                var clientIndex = _clients.FindIndex(c => c.TcpSocket == client.TcpSocket);
+
+                if (clientIndex >= 0)
+                {
+                    var updatedClient = _clients[clientIndex];
+                    updatedClient.Disconnected = true;
+                    _clients[clientIndex] = updatedClient;
+                }
+            }
+
+            Console.WriteLine($"Disconnected client: {client.Username}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error closing client connection: {client.Username}");
+        }
+    }
+
+    private void Shutdown()
+    {
+        _isRunning = false;
+
+        lock (_lock)
+        {
+            _clients.ForEach(DisconnectClient);
+
+            _clients.Clear();
+        }
+
+        try
+        {
+            _serverTcpSocket.Shutdown(SocketShutdown.Both);
+            _serverTcpSocket.Close();
+            _serverUdpSocket.Close();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error closing server sockets: {ex.Message}");
+        }
+
+        Console.WriteLine("Server shutdown complete.");
+    }
+
+    private async Task CleanupDisconnectedClientsAsync()
+    {
+        while (_isRunning)
+        {
+            await Task.Delay(30000);
 
             lock (_lock)
             {
-                _tcpClients.Add(clientSocket);
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await HandleTcpClientAsync(clientSocket);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                });
+                _clients.RemoveAll(c => c.Disconnected);
             }
         }
     }
 
     private string GetUsername(Socket client)
     {
-        var username = "unknown";
+        var username = "";
 
         try
         {
-            if (client is { Connected: false }) return username;
-
             var buffer = new byte[_bufferSize];
 
             var bytesRead = client.Receive(buffer);
@@ -87,142 +162,105 @@ public class Server
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Console.WriteLine($"Error getting username: {ex.Message}");
         }
 
         return username;
     }
 
-    private async Task HandleUdpCommunication()
+    private async Task HandleTcpClientAsync(ClientData client)
     {
         try
         {
-            while (true)
+            while (_isRunning && !client.Disconnected)
             {
                 var buffer = new byte[_bufferSize];
 
-                EndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-
-                var receivedSize = _serverUdpSocket.ReceiveFrom(buffer, ref clientEndPoint);
-
-                if (receivedSize > 0)
-                {
-                    var message = _encoder.GetString(buffer, 0, receivedSize);
-                    BroadcastUdpMessage(message, clientEndPoint);
-                }
-
-                await Task.Delay(10);
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
-    }
-
-    private async Task HandleTcpClientAsync(object state)
-    {
-        var client = (Socket)state;
-
-        var username = GetUsername(client);
-
-        try
-        {
-            while (client is { Connected: true })
-            {
-                var buffer = new byte[_bufferSize];
-
-                var bytesRead = client.Receive(buffer);
+                var bytesRead = client.TcpSocket.Receive(buffer);
 
                 if (bytesRead > 0)
                 {
-                    var message = $"{username} sent {_encoder.GetString(buffer, 0, bytesRead)}";
+                    var message = $"{client.Username} sent {_encoder.GetString(buffer, 0, bytesRead)}";
                     BroadcastTcpMessage(message, client);
                 }
 
                 await Task.Delay(10);
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-        }
         finally
         {
-            CloseClientConnection(client, username);
+            DisconnectClient(client);
         }
     }
 
-    private void CloseClientConnection(Socket client, string name)
+    private async Task HandleUdpCommunicationAsync()
     {
-        lock (_lock)
-        {
-            _tcpClients.Remove(client);
-        }
-
+        EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
         try
         {
-            if (client is { Connected: true }) client.Shutdown(SocketShutdown.Both);
+            while (_isRunning)
+            {
+                var buffer = new byte[_bufferSize];
 
-            Console.WriteLine($"Client disconnected: {name}");
+                var receivedSize = _serverUdpSocket.ReceiveFrom(buffer, ref sender);
 
-            client.Close();
+                if (receivedSize > 0)
+                {
+                    var message = _encoder.GetString(buffer, 0, receivedSize);
+                    BroadcastUdpMessage(message, sender);
+                }
+
+                await Task.Delay(10);
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error closing client: {ex.Message}");
-        }
-    }
-
-    private void BroadcastTcpMessage(string message, Socket sender)
-    {
-        var broadcastBytes = _encoder.GetBytes(message);
-
-        lock (_lock)
-        {
-            var disconnectedClients = new List<Socket>();
-            
-            foreach (var client in _tcpClients)
-                if (client != sender)
-                {
-                    if(!client.Connected) disconnectedClients.Add(client);
-                    
-                    try
-                    {
-                        client.Send(broadcastBytes);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        disconnectedClients.Add(client);
-                    }
-                }
-            
-            foreach (var client in disconnectedClients)
+            lock (_lock)
             {
-                client.Close();
+                _clients.ForEach(client =>
+                {
+                    if (client.UdpEndpoint == sender) DisconnectClient(client);
+                });
             }
         }
     }
 
-    private void BroadcastUdpMessage(string message, EndPoint clientEndPoint)
+    private void BroadcastTcpMessage(string message, ClientData sender)
+    {
+        var messageBytes = _encoder.GetBytes(message);
+
+        lock (_lock)
+        {
+            foreach (var client in _clients.Where(client => !Equals(client.TcpSocket, sender.TcpSocket))
+                         .Where(client => !client.Disconnected))
+                try
+                {
+                    client.TcpSocket.Send(messageBytes);
+                }
+                catch (Exception ex)
+                {
+                    DisconnectClient(client);
+                }
+        }
+    }
+
+    private void BroadcastUdpMessage(string message, EndPoint sender)
     {
         var broadcastBytes = _encoder.GetBytes(message);
 
         lock (_lock)
         {
-            foreach (var client in _tcpClients)
-                if (!Equals(client.RemoteEndPoint, clientEndPoint))
-                    try
-                    {
-                        var udpEndPoint = client.RemoteEndPoint;
-
-                        _serverUdpSocket.SendTo(broadcastBytes, udpEndPoint);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
+            foreach (var client in _clients.Where(client => !client.UdpEndpoint.Equals(sender)))
+            {
+                try
+                {
+                    _serverUdpSocket.SendTo(broadcastBytes, client.UdpEndpoint);
+                }
+                catch (Exception ex)
+                {
+                    DisconnectClient(client);
+                }
+            }
         }
     }
 }

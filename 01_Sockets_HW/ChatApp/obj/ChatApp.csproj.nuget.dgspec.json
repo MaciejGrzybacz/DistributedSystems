@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\006ma\\RiderProjects\\ChatApp\\ChatApp.csproj": {}
+    "C:\\Users\\006ma\\OneDrive\\Dokumenty\\GitHub\\DistributedSystems\\01_Sockets_HW\\ChatApp\\ChatApp.csproj": {}
   },
   "projects": {
-    "C:\\Users\\006ma\\RiderProjects\\ChatApp\\ChatApp.csproj": {
+    "C:\\Users\\006ma\\OneDrive\\Dokumenty\\GitHub\\DistributedSystems\\01_Sockets_HW\\ChatApp\\ChatApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\006ma\\RiderProjects\\ChatApp\\ChatApp.csproj",
+        "projectUniqueName": "C:\\Users\\006ma\\OneDrive\\Dokumenty\\GitHub\\DistributedSystems\\01_Sockets_HW\\ChatApp\\ChatApp.csproj",
         "projectName": "ChatApp",
-        "projectPath": "C:\\Users\\006ma\\RiderProjects\\ChatApp\\ChatApp.csproj",
+        "projectPath": "C:\\Users\\006ma\\OneDrive\\Dokumenty\\GitHub\\DistributedSystems\\01_Sockets_HW\\ChatApp\\ChatApp.csproj",
         "packagesPath": "C:\\Users\\006ma\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\006ma\\RiderProjects\\ChatApp\\obj\\",
+        "outputPath": "C:\\Users\\006ma\\OneDrive\\Dokumenty\\GitHub\\DistributedSystems\\01_Sockets_HW\\ChatApp\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -42,7 +42,7 @@
         "restoreAuditProperties": {
           "enableAudit": "true",
           "auditLevel": "low",
-          "auditMode": "direct"
+          "auditMode": "all"
         },
         "SdkAnalysisLevel": "9.0.100"
       },
@@ -65,7 +65,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Users\\006ma\\.dotnet\\sdk\\9.0.100/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

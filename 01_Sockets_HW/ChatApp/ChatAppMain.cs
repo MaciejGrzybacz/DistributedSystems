@@ -2,7 +2,7 @@
 
 internal class ChatAppMain
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         if (args.Length == 0) throw new ApplicationException("You must provide a type!");
 
@@ -13,7 +13,8 @@ internal class ChatAppMain
         }
         else
         {
-            new Client(args[0]).Run();
+            var client = new Client(args[0]);
+            await client.Run();
         }
     }
 }
